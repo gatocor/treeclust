@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "treeclust"
+version = "0.0.1"
+authors = [
+  { name="Gabriel Torregrosa", email="g.torregrosa@outlook.com" }
+]
+maintainers = [
+  { name="Gabriel Torregrosa", email="g.torregrosa@outlook.com" }
+]
+description = "Package for robust clustering in an hierarchical manner."
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+  "seaborn",
+  "numpy",
+  "scipy",
+  "matplotlib",
+  "leidenalg",
+  "igraph",
+  "pandas",
+  "tqdm",
+  "scikit-network",
+  "cairocffi"
+]
+keywords = ["clustering", "hierarchical", "robustness", "community detection"]
+
+[project.urls]
+Homepage = "https://github.com/gatocor/treeclust"
+Issues = "https://github.com/gatocor/treeclust"

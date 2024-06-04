@@ -1,3 +1,7 @@
+#Custom
+.bash_history
+run.sh
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -77,6 +81,8 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+.jupyter/*
+.local/share/jupyter/*
 
 # IPython
 profile_default/
