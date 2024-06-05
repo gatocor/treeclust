@@ -7,7 +7,7 @@ Package to cluster single cell data using Decision Tree Regressors
 The latest version of the package can be installed with
 
 ```
-pip install git+https://github.com/gatocor/scTreeClustering
+pip install git+https://github.com/gatocor/treeclust
 ```
 
 # Quickstart
