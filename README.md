@@ -31,10 +31,8 @@ import scanpy as sp
 import leidenalg
 
 import treeclust as tc
-```
 
 And the dataset we are going to analyize.
-
 
 ```python
 adata = sp.read_h5ad("../data/pijuan_E6.5_1_processed.h5ad")
@@ -69,11 +67,16 @@ The initialization of the model is very similar to those of the sklearn.
 
 ```python
 model = tc.RobustClusteringLeiden(
-    #Graph representation, necessary for the leiden clustering
-    connectivity_matrix=adata.obsp["neighbors_pca_connectivities"],
-    parameter_range=np.arange(0,1,0.001),
+        #Graph representation, necessary for the leiden clustering
+        connectivity_matrix=adata.obsp["neighbors_pca_connectivities"],
+        parameter_range=(0,2),
+        n_clusters_max=50
 )
 ```
+
+    16it [00:00, 94.96it/s]
+    185it [00:03, 57.41it/s, resolution_parameter=0.000977]
+
 
 And one create we can fit it.
 
@@ -82,7 +85,7 @@ And one create we can fit it.
 model.fit()
 ```
 
-     18%|█▊        | 175/1000 [00:19<01:31,  9.01it/s]
+     58%|█████▊    | 15/26 [00:01<00:01,  8.43it/s]
 
 
 As you can see the method stops before going over all the parameter range because of the early stop criteria.
@@ -214,8 +217,8 @@ Even if we have several methods and threshold criteria, using a single metric to
 
 
 ```python
-model.split(5) #this splits cluster 5 to 6 and 8
-model.merge(13) #this considers merging of 13 and 14 back into 2
+#model.split(6) #this splits cluster 6 to 15 and 16
+model.merge(8) #this considers merging of 13 and 14 back into 2
 ```
 
 
@@ -340,6 +343,7 @@ fig.show()
 
     
 ![png](assets/output_31_0.png)
+    
 
 # Extending the package (Developers)
 
@@ -401,10 +405,10 @@ declare a new `__init__` method coping the RobustCluster class.
     ...
 ```
 
-Finally, create a `_find_clustering` function that takes a clustering parameter and a random seed and returns a partition of the data in form of a list with of the same length as the data.
+Finally, create a `find_clustering` function that takes a clustering parameter and a random seed and returns a partition of the data in form of a list with of the same length as the data.
 
 ```python 
-    def _find_clustering(self, resolution: float, seed: int) -> List[int]:
+    def find_clustering(self, resolution: float, seed: int) -> List[int]:
 
         return leidenalg.find_partition(self._clustering_object, self.partition, resolution_parameter=resolution, seed=seed).membership
 
