@@ -13,7 +13,7 @@ maintainers = [
 ]
 description = "Package for robust clustering in an hierarchical manner."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
