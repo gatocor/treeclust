@@ -1,4 +1,5 @@
 from sknetwork.linalg.normalizer import normalize
+from sklearn.metrics import silhouette_score, silhouette_samples
 from scipy.sparse import spmatrix
 import numpy as np
 from typing import Union, Any
@@ -21,3 +22,24 @@ def connectivity_probability(v: Union[np.ndarray, spmatrix], obj: Any) -> np.nda
     """
 
     return normalize(obj.connectivity_matrix.dot(v))
+
+
+def silhouette_score(X: Union[np.ndarray, spmatrix], lab: list) -> float:
+    """
+    Calculate the silhouette score for given data and number of clusters globally and per computed cluster.
+    
+    Parameters:
+    X : array-like, shape (n_samples, n_features)
+        The input samples (n_samples).
+    lab : list
+        The assigned clusters per cell
+    
+    Returns:
+    float
+        Global and per sample Silhouette score.
+    """
+    
+    # Calculate Silhouette Score
+    score = silhouette_score(X, lab)
+    score = silhouette_samples(X,lab)
+    return 1.5
