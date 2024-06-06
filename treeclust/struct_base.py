@@ -5,40 +5,68 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from .utils import *
 import tqdm
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 class RobustClustering():
+    """
+    A class to perform robust clustering with various functionalities
+    including plotting graphs, handling marker genes, and scoring annotations.
+    """
 
-    parameter_range = None
-    random_state = None
-    n_iter = None
-    threshold = 0.5
-    additional_metrics = {}
-    matrix = None
-    connectivity_matrix = None
-    marker_genes_matrix = None
-    annotation_dict = None    
-    clustering_object = None
-    stop_criterion = None
-    stop_threshold = None
-    probability_metric = None
-    _cluster_resolutions = []
-    _fuzzy_graph = None
-    _active_clusters = np.array([0])
-    _counts = [1]
-    _metrics = {"stability":None}
+    parameter_range: List[float] = None
+    random_state: int = None
+    n_iter: int = None
+    threshold: float = 0.5
+    additional_metrics: Dict[str, Any] = {}
+    X: Optional[np.ndarray] = None
+    connectivity_matrix: Optional[np.ndarray] = None
+    marker_genes_matrix: Optional[pd.DataFrame] = None
+    annotation_dict: Optional[Dict[str, Dict[str, List[str]]]] = None
+    clustering_object: Optional[Any] = None
+    stop_criterion: Optional[str] = None
+    stop_threshold: Optional[float] = None
+    probability_metric: Optional[str] = None
+    _cluster_resolutions: List[float] = []
+    _fuzzy_graph: Optional[igraph.Graph] = None
+    _active_clusters: np.ndarray = np.array([0])
+    _counts: List[int] = [1]
+    _metrics: Dict[str, Optional[np.ndarray]] = {"stability": None}
     
     def __init__(
-        self, 
-        parameter_range=np.arange(0,10,0.1), 
-        random_state=0, 
-        n_iter=10, 
-        threshold=0.5, 
-        additional_metrics={},
-        X=None,
-        connectivity_matrix=None,
-        marker_genes_matrix=None,
-        annotation_dict=None,
+        self,
+        parameter_range: np.ndarray = np.arange(0, 10, 0.1),
+        random_state: int = 0,
+        n_iter: int = 10,
+        threshold: float = 0.5,
+        additional_metrics: Dict[str, Any] = {},
+        X: Optional[np.ndarray] = None,
+        connectivity_matrix: Optional[np.ndarray] = None,
+        marker_genes_matrix: Optional[pd.DataFrame] = None,
+        annotation_dict: Optional[Dict[str, Dict[str, List[str]]]] = None,
     ):
+        """
+        Initialize the RobustClustering class.
+
+        Parameters:
+        - parameter_range: np.ndarray, default=np.arange(0, 10, 0.1)
+          Range of parameters for clustering.
+        - random_state: int, default=0
+          Seed for random number generation.
+        - n_iter: int, default=10
+          Number of iterations for the clustering algorithm.
+        - threshold: float, default=0.5
+          Threshold for certain metrics.
+        - additional_metrics: Dict[str, Any], default={}
+          Additional metrics for evaluation.
+        - X: Optional[np.ndarray], default=None
+          Data matrix.
+        - connectivity_matrix: Optional[np.ndarray], default=None
+          Connectivity matrix.
+        - marker_genes_matrix: Optional[pd.DataFrame], default=None
+          Matrix of marker genes.
+        - annotation_dict: Optional[Dict[str, Dict[str, List[str]]]], default=None
+          Dictionary of annotations.
+        """
 
         self.parameter_range = list(parameter_range)
         self.random_state = random_state
@@ -50,19 +78,130 @@ class RobustClustering():
         self.marker_genes_matrix = marker_genes_matrix
         self.annotation_dict = annotation_dict
         
-    def plot_graph(
-        self, 
-        y=None, 
-        color=None, 
-        size=None, 
-        vertex_label="name", 
-        size_norm=(10,10), 
-        vertex_label_size=10, 
-        palette="rocket", 
-        invert=False,
-        **kwargs        
-    ):
+    def set_marker_genes(self, marker_genes_matrix: pd.DataFrame):        
+        """
+        Set the marker genes matrix.
 
+        Parameters:
+        - marker_genes_matrix: pd.DataFrame
+          Marker genes matrix.
+        """
+
+        self.marker_genes_matrix = marker_genes_matrix
+
+    def set_annotation_dict(self, annotation_dict: Dict[str, Dict[str, List[str]]]):
+        """
+        Set the annotation dictionary.
+
+        Parameters:
+        - annotation_dict: Dict[str, Dict[str, List[str]]]
+          Annotation dictionary.
+        """
+
+        self.annotation_dict = annotation_dict
+
+    def set_threshold(self, metric: Optional[str] = None, threshold: float = 0.5, maximum_likelihood: bool = True):
+        """
+        Set the threshold for a specified metric.
+
+        Parameters:
+        - metric: Optional[str], default=None
+          Metric for thresholding.
+        - threshold: float, default=0.5
+          Threshold value.
+        - maximum_likelihood: bool, default=True
+          Whether to use maximum likelihood for pruning.
+        """
+
+        if metric == None:
+            metric = self.probability_metric
+        
+        m = np.array(self._fuzzy_graph.vs()[metric]) > threshold
+        keep = np.where(m)[0]
+        gs = self._fuzzy_graph.subgraph(keep)
+        for g in gs.connected_components(mode="weak"):
+            if 0 in gs.vs()["name"]:
+                break
+    
+        sg = self._fuzzy_graph.subgraph(gs.subgraph(g).vs()["name"])
+        active_clusters = [i.index for i in sg.vs.select(_outdegree = 0)]
+        if maximum_likelihood:
+            pruning = True
+            while pruning:
+                pruning = False
+                active_clusters_ = []
+                for i in active_clusters:
+                    source = sg.es.select(_target=i)[0].source
+                    if sg.vs(source).outdegree()[0] == 1:
+                        pruning = True
+                        active_clusters_.append(source)
+                    else:
+                        active_clusters_.append(i)
+                active_clusters = active_clusters_.copy()
+    
+        self._active_clusters = np.array(sg.vs(active_clusters)["name"])
+
+    def get_active_clusters(self) -> np.ndarray:
+        """
+        Get the active clusters.
+
+        Returns:
+        - np.ndarray: Array of active clusters.
+        """
+
+        return self._active_clusters.copy()
+
+    def get_metric(self, metric: str) -> np.ndarray:
+        """
+        Get the values of a specified metric.
+
+        Parameters:
+        - metric: str
+          Metric to get.
+
+        Returns:
+        - np.ndarray: Array of metric values.
+        """
+
+        return self._fuzzy_graph.vs()[metric]
+
+    def plot_graph(
+        self,
+        y: Optional[str] = None,
+        color: Optional[str] = None,
+        size: Optional[str] = None,
+        vertex_label: str = "name",
+        size_norm: Tuple[int, int] = (10, 10),
+        vertex_label_size: int = 10,
+        palette: str = "rocket",
+        invert: bool = False,
+        **kwargs
+    ) -> igraph.Plot:
+        """
+        Plot the graph using the specified parameters.
+
+        Parameters:
+        - y: Optional[str], default=None
+          Y-axis variable for plotting.
+        - color: Optional[str], default=None
+          Color variable for nodes.
+        - size: Optional[str], default=None
+          Size variable for nodes.
+        - vertex_label: str, default="name"
+          Label for vertices.
+        - size_norm: Tuple[int, int], default=(10, 10)
+          Normalization range for sizes.
+        - vertex_label_size: int, default=10
+          Size of vertex labels.
+        - palette: str, default="rocket"
+          Color palette for plotting.
+        - invert: bool, default=False
+          Whether to invert the y-axis.
+        - **kwargs: Additional keyword arguments for plotting.
+
+        Returns:
+        - igraph.Plot: Plot of the graph.
+        """
         g = self._fuzzy_graph
     
         if color != None:
@@ -109,7 +248,19 @@ class RobustClustering():
             
         return f
         
-    def plot_annotation_markers(self, metric=None, figsize=None):
+    def plot_annotation_markers(self, metric: Optional[str] = None, figsize: Optional[Tuple[int, int]] = None) -> Tuple[plt.Figure, List[plt.Axes]]:
+        """
+        Plot the annotation markers.
+
+        Parameters:
+        - metric: Optional[str], default=None
+          Metric for plotting.
+        - figsize: Optional[Tuple[int, int]], default=None
+          Figure size for the plot.
+
+        Returns:
+        - Tuple[plt.Figure, List[plt.Axes]]: Figure and axes of the plot.
+        """
 
         if metric == None:
             metric = self.probability_metric
@@ -137,15 +288,32 @@ class RobustClustering():
         
         return fig, ax
     
-    def set_marker_genes(self, marker_genes_matrix):
+    def score_annotation(
+        self,
+        annotation_dict: Optional[Dict[str, Dict[str, List[str]]]] = None,
+        marker_genes_matrix: Optional[pd.DataFrame] = None,
+        metric: Optional[str] = None,
+        vote_style: str = "continuous",
+        threshold: float = 0
+    ) -> pd.DataFrame:
+        """
+        Score the annotations.
 
-        self.marker_genes_matrix = marker_genes_matrix
+        Parameters:
+        - annotation_dict: Optional[Dict[str, Dict[str, List[str]]]], default=None
+          Annotation dictionary.
+        - marker_genes_matrix: Optional[pd.DataFrame], default=None
+          Marker genes matrix.
+        - metric: Optional[str], default=None
+          Metric for scoring.
+        - vote_style: str, default="continuous"
+          Voting style ("discrete" or "continuous").
+        - threshold: float, default=0
+          Threshold for votes.
 
-    def set_annotation_dict(self, annotation_dict):
-
-        self.annotation_dict = annotation_dict
-
-    def score_annotation(self, annotation_dict=None, marker_genes_matrix=None, metric=None, vote_style = "continuous", threshold = 0):
+        Returns:
+        - pandas.DataFrame: DataFrame with annotation scores.
+        """
 
         if metric == None:
             metric = self.probability_metric
@@ -183,8 +351,55 @@ class RobustClustering():
                     d.loc[l,i] += c.loc[k]/len(j)
             
         return d
-            
-    def split(self, cluster):
+
+    def predict(self, metric: Optional[str] = None) -> np.ndarray:
+        """
+        Predict the clusters for the data points.
+
+        Parameters:
+        - metric: Optional[str], default=None
+          Metric for prediction.
+
+        Returns:
+        - np.ndarray: Array of predicted clusters.
+        """
+
+        if metric == None:
+            metric = self.probability_metric
+        
+        probabilities = self._metrics[metric][:,self._active_clusters]
+        probabilities = (probabilities.transpose() / probabilities.sum(axis=1)).transpose()
+
+        return self._active_clusters[probabilities.argmax(axis=1)]
+
+    def predict_probability(self, metric: Optional[str] = None) -> np.ndarray:
+        """
+        Predict the probabilities of clusters for the data points.
+
+        Parameters:
+        - metric: Optional[str], default=None
+          Metric for prediction.
+
+        Returns:
+        - np.ndarray: Array of predicted probabilities.
+        """
+
+        if metric == None:
+            metric = self.probability_metric
+        
+        probabilities = self._metrics[metric][:,self._active_clusters]
+        probabilities = (probabilities.transpose() / probabilities.sum(axis=1)).transpose()
+
+        return probabilities
+
+    def split(self, cluster: int):
+        """
+        Split the specified cluster into its daughter nodes.
+
+        Parameters:
+        - cluster: int
+          Cluster to split.
+        """
 
         if cluster in self._active_clusters:
             daughters = [i.target for i in self._fuzzy_graph.es.select(_source=cluster)]
@@ -198,7 +413,14 @@ class RobustClustering():
         else:
             raise ValueError(f"Cluster {cluster} cannot be split because is not inside the active clusters.")
 
-    def merge(self, cluster):
+    def merge(self, cluster: int):
+        """
+        Merge the specified cluster and other siblings with its parent node.
+
+        Parameters:
+        - cluster: int
+          Cluster to merge.
+        """
 
         if cluster in self._active_clusters:
             parent = [i.source for i in self._fuzzy_graph.es.select(_target=cluster)]
@@ -212,79 +434,70 @@ class RobustClustering():
                 raise ValueError(f"Cluster {cluster} has not parent nodes so it cannot be merged.")
         else:
             raise ValueError(f"Cluster {cluster} cannot be split because is not inside the active clusters.")
-
-    def set_threshold(self, metric=None, threshold=0.5, maximum_likelihood=True):
-
-        if metric == None:
-            metric = self.probability_metric
         
-        m = np.array(self._fuzzy_graph.vs()[metric]) > threshold
-        keep = np.where(m)[0]
-        gs = self._fuzzy_graph.subgraph(keep)
-        for g in gs.connected_components(mode="weak"):
-            if 0 in gs.vs()["name"]:
+    def fit(self, verbose: bool = True):
+        """
+        Fit the clustering model.
+
+        Parameters:
+        - verbose: bool, default=True
+          Whether to display progress information.
+        """
+
+        self._metrics["stability"] = np.ones([self.connectivity_matrix.shape[0],1],np.float64)
+        
+        for metric_name, metric in self.additional_metrics.items():
+            try:
+                self._metrics[metric_name] = metric(self._metrics["stability"], self)
+            except:
+                 raise Exception(f"Metric {metric_name} not computed. Missing arguments.")
+                
+        self._counts = [1]
+        self._cluster_resolutions = [-0.001]
+        self._fuzzy_graph = igraph.Graph(n=1,directed=True)
+        
+        if verbose:
+            iter = tqdm.tqdm(self.parameter_range)
+        else:
+            iter = self.parameter_range
+            
+        for resolution in iter:
+            self._fit_parameter(resolution)
+
+            p = self._metrics[self.stop_criterion].copy()
+            p[p==0] = np.nan
+            p = np.nanmean(p,axis=0)
+            if np.all(p[self._cluster_resolutions == self._cluster_resolutions[-1]] < self.stop_threshold):
                 break
-    
-        sg = self._fuzzy_graph.subgraph(gs.subgraph(g).vs()["name"])
-        active_clusters = [i.index for i in sg.vs.select(_outdegree = 0)]
-        if maximum_likelihood:
-            pruning = True
-            while pruning:
-                pruning = False
-                active_clusters_ = []
-                for i in active_clusters:
-                    source = sg.es.select(_target=i)[0].source
-                    if sg.vs(source).outdegree()[0] == 1:
-                        pruning = True
-                        active_clusters_.append(source)
-                    else:
-                        active_clusters_.append(i)
-                active_clusters = active_clusters_.copy()
-    
-        self._active_clusters = np.array(sg.vs(active_clusters)["name"])
-    
-    def get_active_clusters(self):
 
-        return self._active_clusters.copy()
-    
-    def predict(self, metric = None):
+        for i,j in self._metrics.items():
+            p = self._metrics[i].copy()
+            p[p==0] = np.nan
+            self._fuzzy_graph.vs()[i] = np.nanmean(p,axis=0)
 
-        if metric == None:
-            metric = self.probability_metric
-        
-        probabilities = self._metrics[metric][:,self._active_clusters]
-        probabilities = (probabilities.transpose() / probabilities.sum(axis=1)).transpose()
+        self._fuzzy_graph.vs()["name"] = range(self._metrics["stability"].shape[1])
 
-        return self._active_clusters[probabilities.argmax(axis=1)]
+    def _fit_parameter(self, res: float):
+        """
+        Fit the clustering parameter.
 
-    def predict_probability(self, metric = None):
-
-        if metric == None:
-            metric = self.probability_metric
-        
-        probabilities = self._metrics[metric][:,self._active_clusters]
-        probabilities = (probabilities.transpose() / probabilities.sum(axis=1)).transpose()
-
-        return probabilities
-
-    def set_annotation(self, annotation):
-
-        self.annotation = annotation
-    
-    def get_metric(self, metric):
-
-        return self._fuzzy_graph.vs()[metric]
-    
-    def _fit_parameter(self, res):
+        Parameters:
+        - res: float
+          Resolution parameter for fitting.
+        """
 
         counts = list(self._counts)
         cluster_resolutions = list(self._cluster_resolutions)
         for count,i in enumerate(range(self.n_iter)):
             
-            v = self._find_clustering(res, self.random_state)
+            v = self.find_clustering(res, self.random_state)
             
             membership = get_membership_(v)
 
+            if metric_name=='silhouette_score':
+              s=metric(self.X, membership)
+            
+            else:
             votes = self._metrics["stability"].shape[1]-1-np.argmax((membership.transpose().dot(self._metrics["stability"])/membership.sum(axis=0).reshape(-1,1)>0.5)[:,::-1],axis=1)
             
             for j in np.unique(votes):
@@ -326,38 +539,3 @@ class RobustClustering():
 
         self._counts = np.array(counts)
         self._cluster_resolutions = np.array(cluster_resolutions)
-    
-    def fit(self, verbose = True):
-
-        self._metrics["stability"] = np.ones([self.connectivity_matrix.shape[0],1],np.float64)
-        
-        for metric_name, metric in self.additional_metrics.items():
-            try:
-                self._metrics[metric_name] = metric(self._metrics["stability"], self)
-            except:
-                 raise Exception(f"Metric {metric_name} not computed. Missing arguments.")
-                
-        self._counts = [1]
-        self._cluster_resolutions = [-0.001]
-        self._fuzzy_graph = igraph.Graph(n=1,directed=True)
-        
-        if verbose:
-            iter = tqdm.tqdm(self.parameter_range)
-        else:
-            iter = self.parameter_range
-            
-        for resolution in iter:
-            self._fit_parameter(resolution)
-
-            p = self._metrics[self.stop_criterion].copy()
-            p[p==0] = np.nan
-            p = np.nanmean(p,axis=0)
-            if np.all(p[self._cluster_resolutions == self._cluster_resolutions[-1]] < self.stop_threshold):
-                break
-
-        for i,j in self._metrics.items():
-            p = self._metrics[i].copy()
-            p[p==0] = np.nan
-            self._fuzzy_graph.vs()[i] = np.nanmean(p,axis=0)
-
-        self._fuzzy_graph.vs()["name"] = range(self._metrics["stability"].shape[1])
