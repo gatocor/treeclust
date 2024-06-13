@@ -447,11 +447,18 @@ class RobustClustering():
         self._metrics["stability"] = np.ones([self.connectivity_matrix.shape[0],1],np.float64)
         
         for metric_name, metric in self.additional_metrics.items():
-            try:
-                self._metrics[metric_name] = metric(self._metrics["stability"], self)
-            except:
-                 raise Exception(f"Metric {metric_name} not computed. Missing arguments.")
-                
+            if metric_name=='connectivity_probability':
+              try:
+                  self._metrics[metric_name] = metric(self._metrics["stability"], self)
+              except:
+                  raise Exception(f"Metric {metric_name} not computed. Missing arguments.")
+            elif metric_name=='silhouette_score':
+              try:
+                  self._metrics[metric_name] = np.zeros([1],np.float64)
+              except:
+                  raise Exception(f"Metric {metric_name} not computed. Missing arguments.")
+
+            
         self._counts = [1]
         self._cluster_resolutions = [-0.001]
         self._fuzzy_graph = igraph.Graph(n=1,directed=True)
@@ -471,9 +478,10 @@ class RobustClustering():
                 break
 
         for i,j in self._metrics.items():
-            p = self._metrics[i].copy()
-            p[p==0] = np.nan
-            self._fuzzy_graph.vs()[i] = np.nanmean(p,axis=0)
+            if i=='connectivity_probability':
+              p = self._metrics[i].copy()
+              p[p==0] = np.nan
+              self._fuzzy_graph.vs()[i] = np.nanmean(p,axis=0)
 
         self._fuzzy_graph.vs()["name"] = range(self._metrics["stability"].shape[1])
 
@@ -493,11 +501,7 @@ class RobustClustering():
             v = self.find_clustering(res, self.random_state)
             
             membership = get_membership_(v)
-
-            if metric_name=='silhouette_score':
-              s=metric(self.X, membership)
-            
-            else:
+          
             votes = self._metrics["stability"].shape[1]-1-np.argmax((membership.transpose().dot(self._metrics["stability"])/membership.sum(axis=0).reshape(-1,1)>0.5)[:,::-1],axis=1)
             
             for j in np.unique(votes):
@@ -509,13 +513,24 @@ class RobustClustering():
                     
                     # Compute other metrics
                     for metric_name, metric in self.additional_metrics.items():
-                        p = metric(membership, self)
-                        try:
-                            for div in np.where(divisions)[0]:
-                                self._metrics[metric_name] = np.concatenate([self._metrics[metric_name], p[:,div].reshape(-1,1)],axis=1)
-                        except:
-                            raise Exception(f"Metric {metric_name} not computed. Missing arguments.")
-                            
+                        if metric_name=='connectivity_probability':
+                          # connectivy probability             
+                          p = metric(membership, self)
+                          try:
+                              for div in np.where(divisions)[0]:
+                                  self._metrics[metric_name] = np.concatenate([self._metrics[metric_name], p[:,div].reshape(-1,1)],axis=1)
+                          except:
+                              raise Exception(f"Metric {metric_name} not computed. Missing arguments.")
+                        
+                        elif metric_name=='silhouette_score':
+                          # silhouette score
+                          sil=metric(self.X, v)
+                          try:
+                              self._metrics[metric_name] = np.concatenate([self._metrics[metric_name],sil])
+                          except:
+                              raise Exception(f"Metric {metric_name} not computed. Missing arguments.")
+                          
+    
                     self._fuzzy_graph.add_vertices(sum(divisions))        
                     self._fuzzy_graph.add_edges([(j,k) for k in range(len(counts),len(counts)+sum(divisions))])
                     counts += [1]*sum(divisions)
@@ -528,10 +543,20 @@ class RobustClustering():
                         
                         self._metrics["stability"][:,j] = self._metrics["stability"][:,j]*counts[j]/(counts[j]+1) + membership[:,k]/(counts[j]+1)
                         
-                        for metric_name, metric in self.additional_metrics.items():
-                            p = metric(membership, self)
+                        for metric_name, metric in self.additional_metrics.items(): 
+                          if metric_name=='connectivity_probability':        
+                            p = metric(membership, self)                   
                             try:
                                 self._metrics[metric_name][:,j] = self._metrics[metric_name][:,j]*counts[j]/(counts[j]+1) + p[:,k]/(counts[j]+1)
+                            except:
+                                raise Exception(f"Metric {metric_name} not computed. Missing arguments.")
+                          
+                          elif metric_name=='silhouette_score':
+                            # silhouette score
+                            sil=[]
+                            sil=metric(self.X, v)
+                            try:
+                                self._metrics[metric_name] = np.concatenate([self._metrics[metric_name],sil])
                             except:
                                 raise Exception(f"Metric {metric_name} not computed. Missing arguments.")
 
@@ -539,3 +564,4 @@ class RobustClustering():
 
         self._counts = np.array(counts)
         self._cluster_resolutions = np.array(cluster_resolutions)
+        
