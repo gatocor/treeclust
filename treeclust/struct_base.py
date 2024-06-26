@@ -452,7 +452,7 @@ class RobustClustering():
                   self._metrics[metric_name] = metric(self._metrics["stability"], self)
               except:
                   raise Exception(f"Metric {metric_name} not computed. Missing arguments.")
-            elif metric_name=='silhouette_score':
+            elif metric_name=='silhouette_scoring':
               try:
                   self._metrics[metric_name] = np.zeros([len(self.parameter_range)-1,1],np.float64)
               except:
@@ -522,7 +522,7 @@ class RobustClustering():
                           except:
                               raise Exception(f"Metric {metric_name} not computed. Missing arguments.")
                         
-                        elif metric_name=='silhouette_score':
+                        elif metric_name=='silhouette_scoring':
                           # silhouette score
                           sil=metric(self.X, v)
                           try:
@@ -551,7 +551,7 @@ class RobustClustering():
                             except:
                                 raise Exception(f"Metric {metric_name} not computed. Missing arguments.")
                           
-                          elif metric_name=='silhouette_score':
+                          elif metric_name=='silhouette_scoring':
                             # silhouette score
                             sil=metric(self.X, v)
                             try:
