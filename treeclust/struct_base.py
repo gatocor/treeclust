@@ -3,6 +3,7 @@ import igraph
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from matplotlib.collections import PatchCollection
 from .utils import *
 import tqdm
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -572,8 +573,8 @@ class RobustClustering():
             c_ = np.zeros([1, len(self._active_clusters)])
 
             for i,j in enumerate(self._active_clusters): 
-                idx=model.predict()==j
-                m=model.predict_probability().max(axis=1)[idx].mean() 
+                idx=self.predict()==j
+                m=self.predict_probability().max(axis=1)[idx].mean() 
 
                 c_[:,i] = m
 
@@ -584,18 +585,18 @@ class RobustClustering():
                 if b[0]=='connectivity_probability':
                     c[:,a] = self.predict_probability().max(axis=1).mean()
                 elif b[0]=='silhouette':
-                    v = b[1](self.X, model.predict())
+                    v = b[1](self.X, self.predict())
                     if (np.min(self._metrics[b[0]]<0)):
                         v = (v + abs(np.min(self._metrics[b[0]])))/(np.max(self._metrics[b[0]])+abs(np.min(self._metrics[b[0]])))
                     else:
                         v = (v)/(np.max(self._metrics[b[0]])-np.min(self._metrics[b[0]]))
                     c[:,a] = v
                 elif b[0]=='calinski_harabasz': 
-                    v = b[1](self.X, model.predict())
+                    v = b[1](self.X, self.predict())
                     v = (v-np.min(self._metrics[b[0]]))/(np.max(self._metrics[b[0]])-np.min(self._metrics[b[0]]))
                     c[:,a] = v
                 elif b[0]=='davies_bouldin':
-                    v = 1-b[1](self.X, model.predict())/np.max(self._metrics[b[0]])
+                    v = 1-b[1](self.X, self.predict())/np.max(self._metrics[b[0]])
                     rev= 1-self._metrics[b[0]]/np.max(self._metrics[b[0]])
                     v = (v-np.min(rev))/(np.max(rev)-np.min(rev))
                     c[:,a] = v
@@ -638,7 +639,7 @@ class RobustClustering():
             ax.set_yticks([0])
             ax.set_yticklabels(['Leiden'])
             
-            r=['cluster_'+x.astype(str) for x in model._active_clusters] + [x for x in model.additional_metrics.keys()]
+            r=['cluster_'+x.astype(str) for x in self._active_clusters] + [x for x in self.additional_metrics.keys()]
             ax.set_xticklabels(r, rotation=90)
             ax.set_xticks(np.arange(10)-2.5, minor=True)
             ax.set_xticks([float(n)+1 for n in ax.get_xticks()])
