@@ -1,8 +1,8 @@
 from sknetwork.linalg.normalizer import normalize
-from sklearn.metrics import silhouette_score
 from scipy.sparse import spmatrix
 import numpy as np
 from typing import Union, Any
+from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 
 def connectivity_probability(v: Union[np.ndarray, spmatrix], obj: Any) -> np.ndarray:
     """
@@ -23,8 +23,7 @@ def connectivity_probability(v: Union[np.ndarray, spmatrix], obj: Any) -> np.nda
 
     return normalize(obj.connectivity_matrix.dot(v))
 
-
-def compute_silhouette(X: Union[np.ndarray, spmatrix], lab: list) -> list:
+def silhouette_scoring(X: Union[np.ndarray, spmatrix], lab: list) -> list:
     """
     Calculate the silhouette score for given data and number of clusters globally and per computed cluster.
     
@@ -40,7 +39,46 @@ def compute_silhouette(X: Union[np.ndarray, spmatrix], lab: list) -> list:
     """
     
     # Calculate Silhouette Score
-    return [silhouette_score(X, lab)]
+    score = silhouette_score(X, lab)
+    
+    return score
 
+def calinksi_harabasz_scoring(X: Union[np.ndarray, spmatrix], lab: list) -> list:
+    """
+    Calculate the calinski harabasz score for given data and number of clusters globally and per computed cluster.
+    
+    Parameters:
+    X : array-like, shape (n_samples, n_features)
+        The input samples (n_samples).
+    lab : list
+        The assigned clusters per cell
+    
+    Returns:
+    float
+        Global and per sample Silhouette score.
+    """
+    
+    # Calculate Silhouette Score
+    score = calinski_harabasz_score(X, lab)
+    
+    return score
 
-
+def davies_bouldin_scoring(X: Union[np.ndarray, spmatrix], lab: list) -> list:
+    """
+    Calculate the davies bouldin score for given data and number of clusters globally and per computed cluster.
+    
+    Parameters:
+    X : array-like, shape (n_samples, n_features)
+        The input samples (n_samples).
+    lab : list
+        The assigned clusters per cell
+    
+    Returns:
+    float
+        Global and per sample Silhouette score.
+    """
+    
+    # Calculate Silhouette Score
+    score = davies_bouldin_score(X, lab)
+    
+    return score
