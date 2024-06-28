@@ -60,7 +60,9 @@ class RobustClusteringLeiden(RobustClustering):
         probability_metric: str = "connectivity_probability", 
         additional_metrics: Optional[Dict[str, Callable]] = {
             "connectivity_probability" : connectivity_probability,
-            "silhouette_scoring": silhouette_scoring
+            "silhouette": silhouette_scoring,
+            "calinski_harabasz": calinksi_harabasz_scoring,
+            "davies_bouldin": davies_bouldin_scoring
         },
         marker_genes_matrix: Optional[np.ndarray] = None,
         annotation_dict: Optional[Dict[str, Any]] = None,

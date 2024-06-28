@@ -452,7 +452,7 @@ class RobustClustering():
                   self._metrics[metric_name] = metric(self._metrics["stability"], self)
               except:
                   raise Exception(f"Metric {metric_name} not computed. Missing arguments.")
-            elif metric_name=='silhouette_scoring':
+            else:
               try:
                   self._metrics[metric_name] = np.zeros([len(self.parameter_range)-1,1],np.float64)
               except:
@@ -522,11 +522,11 @@ class RobustClustering():
                           except:
                               raise Exception(f"Metric {metric_name} not computed. Missing arguments.")
                         
-                        elif metric_name=='silhouette_scoring':
+                        else:
                           # silhouette score
-                          sil=metric(self.X, v)
+                          val=metric(self.X, v)
                           try:
-                              self._metrics[metric_name][j] = sil
+                              self._metrics[metric_name][j] = val
                           except:
                               raise Exception(f"Metric {metric_name} not computed. Missing arguments.")
                           
@@ -551,11 +551,11 @@ class RobustClustering():
                             except:
                                 raise Exception(f"Metric {metric_name} not computed. Missing arguments.")
                           
-                          elif metric_name=='silhouette_scoring':
+                          else:
                             # silhouette score
-                            sil=metric(self.X, v)
+                            val=metric(self.X, v)
                             try:
-                                self._metrics[metric_name][j] = sil
+                                self._metrics[metric_name][j] = val
                             except:
                                 raise Exception(f"Metric {metric_name} not computed. Missing arguments.")
 
@@ -563,4 +563,98 @@ class RobustClustering():
 
         self._counts = np.array(counts)
         self._cluster_resolutions = np.array(cluster_resolutions)
-        
+
+
+    def plot_metrics(self,plot_clusters: bool =True, palette1: str = 'Reds', palette2: str='Purples', format: str = 'png'):
+        plot_clusters=True
+        if plot_clusters:
+            # mean connectivity probability per cluster
+            c_ = np.zeros([1, len(self._active_clusters)])
+
+            for i,j in enumerate(self._active_clusters): 
+                idx=model.predict()==j
+                m=model.predict_probability().max(axis=1)[idx].mean() 
+
+                c_[:,i] = m
+
+            # metric scoring
+            c = np.zeros([1,len(self.additional_metrics)])
+
+            for a,b in enumerate(self.additional_metrics.items()):
+                if b[0]=='connectivity_probability':
+                    c[:,a] = self.predict_probability().max(axis=1).mean()
+                elif b[0]=='silhouette':
+                    v = b[1](self.X, model.predict())
+                    if (np.min(self._metrics[b[0]]<0)):
+                        v = (v + abs(np.min(self._metrics[b[0]])))/(np.max(self._metrics[b[0]])+abs(np.min(self._metrics[b[0]])))
+                    else:
+                        v = (v)/(np.max(self._metrics[b[0]])-np.min(self._metrics[b[0]]))
+                    c[:,a] = v
+                elif b[0]=='calinski_harabasz': 
+                    v = b[1](self.X, model.predict())
+                    v = (v-np.min(self._metrics[b[0]]))/(np.max(self._metrics[b[0]])-np.min(self._metrics[b[0]]))
+                    c[:,a] = v
+                elif b[0]=='davies_bouldin':
+                    v = 1-b[1](self.X, model.predict())/np.max(self._metrics[b[0]])
+                    rev= 1-self._metrics[b[0]]/np.max(self._metrics[b[0]])
+                    v = (v-np.min(rev))/(np.max(rev)-np.min(rev))
+                    c[:,a] = v
+
+
+            val=np.concatenate([c_,c], axis=1)[0]
+
+            fig, ax = plt.subplots(1,1, figsize=(11,2),layout='tight')
+
+            x0,y0 = np.meshgrid(np.arange(c_.shape[1]+c.shape[1]), np.arange(c.shape[0]))
+            circles=[]
+
+            # circles for clusters connectivity probability
+            for xi,yi in zip(x0[0][:c_.shape[1]].flat,y0[0][:c_.shape[1]].flat):
+                xi=xi-1
+                #R = t[xi]/c_.max()/2
+                R=1/2*0.9
+                circle=plt.Circle((xi-1,yi),radius=R, edgecolor='black', lw=2)
+                circles.append(circle)
+
+            rectangles=[]
+            # rectangles for metric scoring 
+            for xj, yj, metric in zip(x0[0][c_.shape[1]:].flat,y0[0][c_.shape[1]:].flat, self.additional_metrics.items()):
+                xj=xj-1
+                if metric[0]=='connectivity_probability':
+                    rectangle=plt.Rectangle([xj-1,-0.5+yj], val[xj]*0.9, 1, angle=0.0, rotation_point='xy')
+                    rectangles.append(rectangle)
+                else: # other metrics
+                    rectangle=plt.Rectangle([xj-1,-0.5+yj], v, 1, angle=0.0, rotation_point='xy')
+                    rectangles.append(rectangle)
+
+            cir = PatchCollection(patches=circles,array=val[:c_.shape[1]],cmap="Reds", ec='black', alpha=0.8)
+            rec = PatchCollection(patches=rectangles,array=val[c_.shape[1]:],cmap="Purples", ec='black', alpha=0.8)
+
+            ax.add_collection(cir)
+            ax.add_collection(rec)
+            
+            # ticks and labels
+            ax.set_yticks([-1], minor=False)
+            ax.set_yticks([0])
+            ax.set_yticklabels(['Leiden'])
+            
+            r=['cluster_'+x.astype(str) for x in model._active_clusters] + [x for x in model.additional_metrics.keys()]
+            ax.set_xticklabels(r, rotation=90)
+            ax.set_xticks(np.arange(10)-2.5, minor=True)
+            ax.set_xticks([float(n)+1 for n in ax.get_xticks()])
+            ax.set_xlim(-2.5,9)
+
+            # title
+            ax.set_title('Benchmarking metrics', fontsize=12)
+
+        # def alt_bands(ax=None):
+        #     ax = ax or plt.gca()
+        #     x_left, x_right = ax.get_xlim()
+        #     locs = ax.get_xticks()
+        #     for loc1, loc2 in zip(locs[::2], np.concatenate((locs, [x_right]))[1::2]):
+        #         ax.axhspan(loc1-0.5, loc2-0.5, facecolor='black', alpha=0.1)
+
+        # alt_bands(ax)
+
+        #ax.set_ylim(-1,1)
+        return fig,ax
