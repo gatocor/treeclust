@@ -31,6 +31,7 @@ import scanpy as sp
 import leidenalg
 
 import treeclust as tc
+```
 
 And the dataset we are going to analyize.
 

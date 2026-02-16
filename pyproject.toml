@@ -20,18 +20,84 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-  "seaborn",
-  "numpy",
-  "scipy",
-  "matplotlib",
-  "leidenalg",
-  "igraph",
-  "pandas",
-  "tqdm",
-  "scikit-network",
-  "cairocffi"
+  "numpy>=1.19.0",
+  "scipy>=1.5.0",
+  "matplotlib>=3.3.0",
+  "pandas>=1.1.0", 
+  "seaborn>=0.11.0",
+  "tqdm>=4.50.0",
+  "scikit-learn>=0.24.0",
+  "distinctipy>=0.2.0"
 ]
 keywords = ["clustering", "hierarchical", "robustness", "community detection"]
+
+[project.optional-dependencies]
+# Core clustering algorithms
+clustering = [
+  "leidenalg>=0.8.0",
+  "igraph>=0.9.0",
+  "scikit-network>=0.24.0"
+]
+
+# GPU acceleration
+gpu = [
+  "cupy>=8.0.0",
+  "rapids-cudf>=21.06.0",
+  "cugraph>=21.06.0"
+]
+
+# Single-cell analysis
+bio = [
+  "anndata>=0.7.0",
+  "scanpy>=1.7.0",
+  "scvi-tools>=0.14.0"
+]
+
+# Enhanced plotting and visualization
+plotting = [
+  "plotly>=4.14.0",
+  "bokeh>=2.3.0",
+  "networkx>=2.5.0",
+  "cairocffi>=1.2.0",
+  "pygraphviz>=1.7.0"
+]
+
+# Development dependencies
+dev = [
+  "pytest>=6.0.0",
+  "pytest-cov>=2.10.0",
+  "black>=21.0.0",
+  "flake8>=3.8.0",
+  "mypy>=0.812",
+  "pre-commit>=2.10.0"
+]
+
+# Documentation dependencies  
+docs = [
+  "sphinx>=4.0.0",
+  "sphinx-rtd-theme>=0.5.0",
+  "sphinxcontrib-napoleon>=0.7.0",
+  "jupyter>=1.0.0",
+  "nbsphinx>=0.8.0"
+]
+
+# All optional dependencies
+all = [
+  "leidenalg>=0.8.0",
+  "igraph>=0.9.0", 
+  "scikit-network>=0.24.0",
+  "cupy>=8.0.0",
+  "rapids-cudf>=21.06.0",
+  "cugraph>=21.06.0", 
+  "anndata>=0.7.0",
+  "scanpy>=1.7.0",
+  "scvi-tools>=0.14.0",
+  "plotly>=4.14.0",
+  "bokeh>=2.3.0",
+  "networkx>=2.5.0",
+  "cairocffi>=1.2.0",
+  "pygraphviz>=1.7.0"
+]
 
 [project.urls]
 Homepage = "https://github.com/gatocor/treeclust"

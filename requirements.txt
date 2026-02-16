@@ -1,0 +1,34 @@
+# Core dependencies (always required)
+numpy>=1.19.0
+scipy>=1.5.0
+matplotlib>=3.3.0
+pandas>=1.1.0
+seaborn>=0.11.0
+tqdm>=4.50.0
+scikit-learn>=0.24.0
+
+# Optional clustering dependencies
+# Install with: pip install "treeclust[clustering]"
+# leidenalg>=0.8.0
+# igraph>=0.9.0
+# scikit-network>=0.24.0
+
+# Optional GPU dependencies  
+# Install with: pip install "treeclust[gpu]"
+# cupy>=8.0.0
+# rapids-cudf>=21.06.0
+# cugraph>=21.06.0
+
+# Optional biological analysis dependencies
+# Install with: pip install "treeclust[bio]"
+# anndata>=0.7.0
+# scanpy>=1.7.0
+# scvi-tools>=0.14.0
+
+# Optional plotting dependencies
+# Install with: pip install "treeclust[plotting]"
+# plotly>=4.14.0
+# bokeh>=2.3.0
+# networkx>=2.5.0
+# cairocffi>=1.2.0
+# pygraphviz>=1.7.0
